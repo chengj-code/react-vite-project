@@ -37,7 +37,8 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
             isDark,
         };
     }, [isDark, toggleTheme]);
-
+    // 从 React 19 开始，你可以将 <SomeContext> 作为渲染的上下文 provider。
+    // 较旧版本的 React 需要使用 <SomeContext.Provider>。
     return (
         <ThemeContext.Provider value={themeValue}>
             <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>
