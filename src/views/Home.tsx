@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { CheckSquareOutlined, AppstoreOutlined, CodeOutlined, ArrowRightOutlined } from '@ant-design/icons';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Paragraph } = Typography;
 
 // 应用卡片组件属性接口
 interface AppCardProps {
@@ -109,9 +109,7 @@ const Home = () => {
                     color: '#999',
                     fontSize: 14,
                 }}
-            >
-                <Text>© 2025 React 应用演示</Text>
-            </div>
+            ></div>
         </div>
     );
 };
