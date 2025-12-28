@@ -1,18 +1,15 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Input, Button, Checkbox, Card, Space, Typography, Switch, Empty } from 'antd';
+import { Input, Button, Checkbox, Card, Space, Typography, Switch, Empty, Pagination, Spin, message } from 'antd';
 import { DeleteOutlined, PlusOutlined, EditOutlined, CheckOutlined, CloseOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useAppStore } from '@/store';
 import { getThemeColors } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/theme';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchTodos, addTodo, updateTodo, deleteTodo, toggleTodo as toggleTodoApi } from '@/api/todoApi';
+import type { TodoItem, TodosResponse } from '@/api/todoApi';
 
 const { Title } = Typography;
-
-interface TodoItem {
-    id: string;
-    text: string;
-    completed: boolean;
-}
 
 // 任务项组件
 interface TaskItemProps {
@@ -217,28 +214,15 @@ const TaskList = ({ tasks, title, themeColors, onToggle, onEdit, onSave, onCance
 
 const ToDoList = () => {
     // 状态管理
-    const [todos, setTodos] = useState<TodoItem[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingText, setEditingText] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 5;
 
     const { themeMode, toggleThemeMode } = useAppStore();
     const navigate = useNavigate();
-
-    // 分离已完成和未完成的任务（使用 useMemo 优化性能）
-    const { pendingTodos, completedTodos, stats } = useMemo(() => {
-        const pending = todos.filter(todo => !todo.completed);
-        const completed = todos.filter(todo => todo.completed);
-        return {
-            pendingTodos: pending,
-            completedTodos: completed,
-            stats: {
-                total: todos.length,
-                completed: completed.length,
-                pending: pending.length,
-            },
-        };
-    }, [todos]);
+    const queryClient = useQueryClient();
 
     // 主题颜色变量
     const themeColors = useMemo(() => {
@@ -275,51 +259,193 @@ const ToDoList = () => {
         [themeColors]
     );
 
-    // 事件处理函数 - 使用 useCallback 优化，减少不必要的重渲染
-    const addTodo = useCallback(() => {
+    // 查询Todo列表
+    const {
+        data: todosData,
+        isLoading,
+        error,
+    } = useQuery<TodosResponse>({
+        queryKey: ['todos', currentPage, pageSize],
+        queryFn: () => fetchTodos(currentPage, pageSize),
+        staleTime: 2 * 60 * 1000, // 2分钟后数据过期
+    });
+
+    // 分离已完成和未完成的任务
+    const { pendingTodos, completedTodos, stats } = useMemo(() => {
+        const allTodos = todosData?.todos || [];
+        const pending = allTodos.filter((todo: TodoItem) => !todo.completed);
+        const completed = allTodos.filter((todo: TodoItem) => todo.completed);
+        return {
+            pendingTodos: pending,
+            completedTodos: completed,
+            stats: {
+                total: todosData?.total || 0,
+                completed: completed.length,
+                pending: pending.length,
+            },
+        };
+    }, [todosData]);
+
+    // 预取下一页数据
+    const prefetchNextPage = useCallback(() => {
+        if (todosData && todosData.todos.length === pageSize) {
+            queryClient.prefetchQuery({
+                queryKey: ['todos', currentPage + 1, pageSize],
+                queryFn: () => fetchTodos(currentPage + 1, pageSize),
+            });
+        }
+    }, [queryClient, currentPage, pageSize, todosData]);
+
+    // 添加Todo的Mutation
+    const addTodoMutation = useMutation({
+        mutationFn: (text: string) => addTodo(text),
+        onSuccess: newTodo => {
+            // 乐观更新：立即将新Todo添加到缓存
+            queryClient.setQueryData(['todos', 1, pageSize], (oldData: TodosResponse | undefined) => {
+                if (oldData) {
+                    return {
+                        ...oldData,
+                        todos: [newTodo, ...oldData.todos.slice(0, pageSize - 1)],
+                        total: oldData.total + 1,
+                    };
+                }
+                return oldData;
+            });
+            // 重新获取最新数据
+            queryClient.invalidateQueries({ queryKey: ['todos'] });
+            message.success('添加成功');
+        },
+        onError: () => {
+            message.error('添加失败');
+        },
+    });
+
+    // 更新Todo的Mutation
+    const updateTodoMutation = useMutation({
+        mutationFn: ({ id, text }: { id: string; text: string }) => updateTodo(id, { text }),
+        onSuccess: updatedTodo => {
+            // 乐观更新：立即更新缓存中的Todo
+            queryClient.setQueryData(['todos', currentPage, pageSize], (oldData: TodosResponse | undefined) => {
+                if (oldData) {
+                    return {
+                        ...oldData,
+                        todos: oldData.todos.map((todo: TodoItem) => (todo.id === updatedTodo.id ? updatedTodo : todo)),
+                    };
+                }
+                return oldData;
+            });
+            message.success('更新成功');
+        },
+        onError: () => {
+            message.error('更新失败');
+        },
+    });
+
+    // 删除Todo的Mutation
+    const deleteTodoMutation = useMutation({
+        mutationFn: (id: string) => deleteTodo(id),
+        onSuccess: (_, variables) => {
+            // 乐观更新：立即从缓存中移除Todo
+            queryClient.setQueryData(['todos', currentPage, pageSize], (oldData: any) => {
+                if (oldData) {
+                    return {
+                        ...oldData,
+                        todos: oldData.todos.filter((todo: TodoItem) => todo.id !== variables),
+                        total: oldData.total - 1,
+                    };
+                }
+                return oldData;
+            });
+            // 重新获取最新数据
+            queryClient.invalidateQueries({ queryKey: ['todos'] });
+            message.success('删除成功');
+        },
+        onError: () => {
+            message.error('删除失败');
+        },
+    });
+
+    // 切换Todo完成状态的Mutation
+    const toggleTodoMutation = useMutation({
+        mutationFn: (id: string) => toggleTodoApi(id),
+        onSuccess: updatedTodo => {
+            // 乐观更新：立即更新缓存中的Todo完成状态
+            queryClient.setQueryData(['todos', currentPage, pageSize], (oldData: any) => {
+                if (oldData) {
+                    return {
+                        ...oldData,
+                        todos: oldData.todos.map((todo: TodoItem) => (todo.id === updatedTodo.id ? updatedTodo : todo)),
+                    };
+                }
+                return oldData;
+            });
+            message.success('状态更新成功');
+        },
+        onError: () => {
+            message.error('状态更新失败');
+        },
+    });
+
+    // 事件处理函数
+    const handleAddTodo = useCallback(() => {
         if (inputValue.trim()) {
-            const newTodo: TodoItem = {
-                id: crypto.randomUUID(),
-                text: inputValue.trim(),
-                completed: false,
-            };
-            setTodos(prev => [...prev, newTodo]);
+            addTodoMutation.mutate(inputValue.trim());
             setInputValue('');
         }
-    }, [inputValue]);
+    }, [inputValue, addTodoMutation]);
 
-    const toggleTodo = useCallback((id: string) => {
-        setTodos(prev => prev.map(todo => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)));
-    }, []);
-
-    const deleteTodo = useCallback(
+    const handleToggleTodo = useCallback(
         (id: string) => {
-            setTodos(prev => prev.filter(todo => todo.id !== id));
+            toggleTodoMutation.mutate(id);
+        },
+        [toggleTodoMutation]
+    );
+
+    const handleDeleteTodo = useCallback(
+        (id: string) => {
+            deleteTodoMutation.mutate(id);
             if (editingId === id) {
                 setEditingId(null);
                 setEditingText('');
             }
         },
-        [editingId]
+        [editingId, deleteTodoMutation]
     );
 
-    const editTodo = useCallback((id: string, text: string) => {
+    const handleEditTodo = useCallback((id: string, text: string) => {
         setEditingId(id);
         setEditingText(text);
     }, []);
 
-    const saveTodo = useCallback(() => {
+    const handleSaveTodo = useCallback(() => {
         if (editingId && editingText.trim()) {
-            setTodos(prev => prev.map(todo => (todo.id === editingId ? { ...todo, text: editingText.trim() } : todo)));
+            updateTodoMutation.mutate({ id: editingId, text: editingText.trim() });
             setEditingId(null);
             setEditingText('');
         }
-    }, [editingId, editingText]);
+    }, [editingId, editingText, updateTodoMutation]);
 
-    const cancelEdit = useCallback(() => {
+    const handleCancelEdit = useCallback(() => {
         setEditingId(null);
         setEditingText('');
     }, []);
+
+    const handlePageChange = useCallback(
+        (page: number) => {
+            setCurrentPage(page);
+            // 当切换到新页面时，预取下一页
+            prefetchNextPage();
+        },
+        [prefetchNextPage]
+    );
+
+    // 组件挂载时预取第一页数据
+    useQuery({
+        queryKey: ['todos', 1, pageSize],
+        queryFn: () => fetchTodos(1, pageSize),
+        staleTime: 2 * 60 * 1000,
+        enabled: currentPage === 1,
+    });
 
     return (
         <>
@@ -365,38 +491,57 @@ const ToDoList = () => {
                         display: 'flex',
                     }}
                 >
-                    <Input placeholder="添加待办事项..." value={inputValue} onChange={e => setInputValue(e.target.value)} onPressEnter={addTodo} style={themeStyles.input} allowClear />
-                    <Button type="primary" icon={<PlusOutlined />} onClick={addTodo} size="large" style={{ minWidth: 80 }}>
+                    <Input placeholder="添加待办事项..." value={inputValue} onChange={e => setInputValue(e.target.value)} onPressEnter={handleAddTodo} style={themeStyles.input} allowClear />
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAddTodo} size="large" style={{ minWidth: 80 }}>
                         添加
                     </Button>
                 </Space.Compact>
 
-                {/* 任务列表区域 */}
-                <TaskList
-                    tasks={pendingTodos}
-                    title="未完成任务"
-                    themeColors={themeColors}
-                    onToggle={toggleTodo}
-                    onEdit={editTodo}
-                    onSave={saveTodo}
-                    onCancel={cancelEdit}
-                    onDelete={deleteTodo}
-                    editingId={editingId}
-                    editingText={editingText}
-                />
+                {/* 加载状态 */}
+                {isLoading ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <Spin size="large" />
+                        <p style={{ marginTop: 16, color: themeStyles.text.color }}>加载中...</p>
+                    </div>
+                ) : error ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: themeColors.buttonDanger }}>
+                        <p>加载失败，请刷新页面重试</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* 任务列表区域 */}
+                        <TaskList
+                            tasks={pendingTodos}
+                            title="未完成任务"
+                            themeColors={themeColors}
+                            onToggle={handleToggleTodo}
+                            onEdit={handleEditTodo}
+                            onSave={handleSaveTodo}
+                            onCancel={handleCancelEdit}
+                            onDelete={handleDeleteTodo}
+                            editingId={editingId}
+                            editingText={editingText}
+                        />
 
-                <TaskList
-                    tasks={completedTodos}
-                    title="已完成任务"
-                    themeColors={themeColors}
-                    onToggle={toggleTodo}
-                    onEdit={editTodo}
-                    onSave={saveTodo}
-                    onCancel={cancelEdit}
-                    onDelete={deleteTodo}
-                    editingId={editingId}
-                    editingText={editingText}
-                />
+                        <TaskList
+                            tasks={completedTodos}
+                            title="已完成任务"
+                            themeColors={themeColors}
+                            onToggle={handleToggleTodo}
+                            onEdit={handleEditTodo}
+                            onSave={handleSaveTodo}
+                            onCancel={handleCancelEdit}
+                            onDelete={handleDeleteTodo}
+                            editingId={editingId}
+                            editingText={editingText}
+                        />
+
+                        {/* 分页组件 */}
+                        <div style={{ marginTop: 24, textAlign: 'center' }}>
+                            <Pagination current={currentPage} pageSize={pageSize} total={stats.total} onChange={handlePageChange} showSizeChanger={false} style={{ color: themeStyles.text.color }} />
+                        </div>
+                    </>
+                )}
 
                 {/* 统计信息 */}
                 <div
