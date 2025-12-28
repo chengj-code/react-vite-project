@@ -1,4 +1,4 @@
-import { Card, Button, Typography, Row, Col, Space, InputNumber, Tag, Divider, Empty, message, Popconfirm, type PopconfirmProps, Spin } from 'antd';
+import { Card, Button, Typography, Row, Col, Space, InputNumber, Tag, Divider, Empty, message, Popconfirm, Spin } from 'antd';
 import { ShoppingCartOutlined, DeleteOutlined, PlusOutlined, MinusOutlined, ArrowRightOutlined, ShoppingOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
