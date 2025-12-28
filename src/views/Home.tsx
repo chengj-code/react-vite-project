@@ -1,7 +1,8 @@
-import { Card, Button, Typography, Row, Col, Avatar } from 'antd';
-import { Link } from 'react-router-dom';
+import { Card, Button, Typography, Row, Col, Avatar, Space } from 'antd';
+import { Link, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { CheckSquareOutlined, AppstoreOutlined, CodeOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { CheckSquareOutlined, AppstoreOutlined, CodeOutlined, ArrowRightOutlined, LogoutOutlined, LoginOutlined } from '@ant-design/icons';
+import { useAppStore } from '@/store';
 
 const { Title, Paragraph } = Typography;
 
@@ -69,19 +70,70 @@ const apps = [
         to: '/reducer',
         buttonText: '进入应用',
     },
+    // {
+    //     title: 'React Router 演示',
+    //     description: '演示React Router v6的核心功能，包括路由配置、嵌套路由、动态路由参数等。',
+    //     icon: <CodeOutlined />,
+    //     iconBgColor: '#722ed1',
+    //     to: '/router-demo',
+    //     buttonText: '进入演示',
+    // },
     {
-        title: 'React Router 演示',
-        description: '演示React Router v6的核心功能，包括路由配置、嵌套路由、动态路由参数等。',
+        title: 'Zustand 状态管理演示',
+        description: '演示Zustand状态管理库的基本用法，包括状态定义、状态更新和状态订阅。',
         icon: <CodeOutlined />,
         iconBgColor: '#722ed1',
-        to: '/router-demo',
+        to: '/zustand',
         buttonText: '进入演示',
     },
 ];
 
 const Home = () => {
+    const { isAuthenticated, user, logout } = useAppStore();
+    const navigate = useNavigate();
+
+    // 处理登出
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    // 处理登录
+    const handleLogin = () => {
+        navigate('/login');
+    };
+
     return (
         <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+            {/* 右上角登录/登出按钮 */}
+            <div style={{ textAlign: 'right', marginBottom: 24 }}>
+                <Space size="middle">
+                    {isAuthenticated && user && (
+                        <Paragraph style={{ margin: 0, fontWeight: 'bold' }}>
+                            欢迎，{user.username}！
+                        </Paragraph>
+                    )}
+                    {isAuthenticated ? (
+                        <Button
+                            type="primary"
+                            danger
+                            icon={<LogoutOutlined />}
+                            onClick={handleLogout}
+                        >
+                            登出
+                        </Button>
+                    ) : (
+                        <Button
+                            type="primary"
+                            icon={<LoginOutlined />}
+                            onClick={handleLogin}
+                        >
+                            登录
+                        </Button>
+                    )}
+                </Space>
+            </div>
+
             {/* 页面标题 */}
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
                 <Avatar size={80} icon={<CodeOutlined style={{ fontSize: 40 }} />} style={{ backgroundColor: '#1890ff', marginBottom: 16 }} />
@@ -99,17 +151,6 @@ const Home = () => {
                     </Col>
                 ))}
             </Row>
-
-            {/* 页脚信息 */}
-            <div
-                style={{
-                    textAlign: 'center',
-                    marginTop: 40,
-                    padding: '20px 0',
-                    color: '#999',
-                    fontSize: 14,
-                }}
-            ></div>
         </div>
     );
 };

@@ -1,59 +1,10 @@
-import React, { useState, useContext, createContext, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Card, Input, Button, Space, Typography, Divider, Badge, Tag, ConfigProvider, theme } from 'antd';
-import { MessageOutlined, SettingOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { MessageOutlined, SettingOutlined, ShareAltOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '@/store';
 
 const { Title, Paragraph } = Typography;
-
-// ====================== 1. 跨组件通信：Context API ======================
-// 创建Context
-interface ThemeContextType {
-    theme: 'light' | 'dark';
-    toggleTheme: () => void;
-    isDark: boolean;
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-// Context Provider组件
-const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-    const [isDark, setIsDark] = useState<boolean>(false);
-
-    const toggleTheme = useCallback(() => {
-        setIsDark(prev => !prev);
-    }, []);
-
-    // 使用Ant Design的主题配置
-    const themeConfig = useMemo(() => {
-        return {
-            algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
-        };
-    }, [isDark]);
-
-    // 暴露主题状态和切换函数
-    const themeValue = useMemo((): ThemeContextType => {
-        return {
-            theme: isDark ? 'dark' : 'light',
-            toggleTheme,
-            isDark,
-        };
-    }, [isDark, toggleTheme]);
-    // 从 React 19 开始，你可以将 <SomeContext> 作为渲染的上下文 provider。
-    // 较旧版本的 React 需要使用 <SomeContext.Provider>。
-    return (
-        <ThemeContext.Provider value={themeValue}>
-            <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>
-        </ThemeContext.Provider>
-    );
-};
-
-// 自定义Hook，用于使用ThemeContext
-const useTheme = () => {
-    const context = useContext(ThemeContext);
-    if (!context) {
-        throw new Error('useTheme must be used within a ThemeProvider');
-    }
-    return context;
-};
 
 // ====================== 2. 父组件：演示各种通信方式 ======================
 interface ParentComponentProps {
@@ -66,15 +17,15 @@ const ParentComponent = ({ initialMessage = 'Hello from Parent' }: ParentCompone
     const [parentState, setParentState] = useState<string>(initialMessage);
     const [childMessage, setChildMessage] = useState<string>('');
     const [siblingMessage, setSiblingMessage] = useState<string>('');
-
+    const { count, themeMode } = useAppStore();
     // 父传子：通过props传递数据和回调函数
     const parentToChildData = useMemo(
         () => ({
             title: 'Parent to Child Communication',
-            count: 42,
+            count: count,
             isActive: true,
         }),
-        []
+        [count]
     );
 
     // 子传父：父组件定义回调函数，传递给子组件
@@ -91,49 +42,63 @@ const ParentComponent = ({ initialMessage = 'Hello from Parent' }: ParentCompone
     const handleParentAction = () => {
         setParentState('Parent state updated!');
     };
+    const navigate = useNavigate();
+
+    // 使用Ant Design的主题配置
+    const themeConfig = useMemo(() => {
+        return {
+            algorithm: themeMode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
+        };
+    }, [themeMode]);
 
     return (
-        <Card title={<Title level={3}>React组件通信方式演示</Title>} style={{ maxWidth: 800, margin: '0 auto' }}>
-            {/* 父组件状态展示 */}
-            <div style={{ marginBottom: 24, padding: 16, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
-                <Title level={5}>父组件状态</Title>
-                <Paragraph>{parentState}</Paragraph>
-                <Button type="primary" onClick={handleParentAction} icon={<SettingOutlined />}>
-                    更新父组件状态
+        <ConfigProvider theme={themeConfig}>
+            {/* 返回首页按钮 */}
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <Button onClick={() => navigate('/')} type="primary" size="large" icon={<ArrowRightOutlined />}>
+                    返回首页
                 </Button>
             </div>
-
-            <Divider>1. 父传子通信 (Props)</Divider>
-            {/* 父传子：通过props传递数据 */}
-            <ChildComponent data={parentToChildData} onMessage={handleChildMessage} />
-
-            <Divider>2. 子传父通信 (Callback Props)</Divider>
-            {/* 子传父：子组件通过回调函数传递数据给父组件 */}
-            <div style={{ marginBottom: 24 }}>
-                <Title level={5}>子组件传递的消息：</Title>
-                <Badge status={childMessage ? 'success' : 'default'} text={childMessage || '等待子组件消息'} />
-            </div>
-
-            <Divider>3. 兄弟组件通信 (Parent as Mediator)</Divider>
-            {/* 兄弟组件通信：通过父组件作为中介 */}
-            <Space orientation="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', gap: 16 }}>
-                    <SiblingComponentA onUpdate={handleSiblingUpdate} />
-                    <SiblingComponentB message={siblingMessage} />
+            <Card title={<Title level={3}>React组件通信方式演示</Title>} style={{ maxWidth: 800, margin: '0 auto' }}>
+                {/* 父组件状态展示 */}
+                <div style={{ marginBottom: 24, padding: 16, backgroundColor: themeMode === 'dark' ? '#333' : '#f5f5f5', borderRadius: 8 }}>
+                    <Title level={5}>父组件状态</Title>
+                    <Paragraph>{parentState}</Paragraph>
+                    <Button type="primary" onClick={handleParentAction} icon={<SettingOutlined />}>
+                        更新父组件状态
+                    </Button>
                 </div>
-                <div style={{ marginTop: 16, padding: 16, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
-                    <Title level={5}>兄弟组件通信状态：</Title>
-                    <Paragraph>组件A传递给组件B的消息：{siblingMessage || '暂无消息'}</Paragraph>
-                </div>
-            </Space>
 
-            <Divider>4. 跨组件通信 (Context API)</Divider>
-            {/* 跨组件通信：使用Context API */}
-            <ThemeProvider>
+                <Divider>1. 父传子通信 (Props)</Divider>
+                {/* 父传子：通过props传递数据 */}
+                <ChildComponent data={parentToChildData} onMessage={handleChildMessage} />
+
+                <Divider>2. 子传父通信 (Callback Props)</Divider>
+                {/* 子传父：子组件通过回调函数传递数据给父组件 */}
+                <div style={{ marginBottom: 24 }}>
+                    <Title level={5}>子组件传递的消息：</Title>
+                    <Badge status={childMessage ? 'success' : 'default'} text={childMessage || '等待子组件消息'} />
+                </div>
+
+                <Divider>3. 兄弟组件通信 (Parent as Mediator)</Divider>
+                {/* 兄弟组件通信：通过父组件作为中介 */}
+                <Space orientation="vertical" style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', gap: 16 }}>
+                        <SiblingComponentA onUpdate={handleSiblingUpdate} />
+                        <SiblingComponentB message={siblingMessage} />
+                    </div>
+                    <div style={{ marginTop: 16, padding: 16, backgroundColor: themeMode === 'dark' ? '#333' : '#f5f5f5', borderRadius: 8 }}>
+                        <Title level={5}>兄弟组件通信状态：</Title>
+                        <Paragraph>组件A传递给组件B的消息：{siblingMessage || '暂无消息'}</Paragraph>
+                    </div>
+                </Space>
+
+                <Divider>4. 跨组件通信 (Zustand)</Divider>
+                {/* 跨组件通信：使用Zustand */}
                 <ContextChildComponent1 />
                 <ContextChildComponent2 />
-            </ThemeProvider>
-        </Card>
+            </Card>
+        </ConfigProvider>
     );
 };
 
@@ -250,58 +215,53 @@ const SiblingComponentB = ({ message }: SiblingComponentBProps) => {
     );
 };
 
-// ====================== 跨组件通信：Context子组件1 ======================
+// ====================== 跨组件通信：Zustand子组件1 ======================
 const ContextChildComponent1 = () => {
-    const { theme, toggleTheme, isDark } = useTheme();
+    const { themeMode, toggleThemeMode } = useAppStore();
+    const isDark = themeMode === 'dark';
+    const theme = themeMode;
 
     return (
-        <Card size="small" title="Context子组件1" style={{ marginBottom: 16 }}>
+        <Card size="small" title="Zustand子组件1" style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 16 }}>
                 <Paragraph>当前主题：{theme === 'light' ? '浅色' : '深色'}</Paragraph>
             </div>
             <Space size="middle">
-                <Button type={isDark ? 'default' : 'primary'} onClick={toggleTheme} icon={isDark ? '☀️' : '🌙'} block>
+                <Button type={isDark ? 'default' : 'primary'} onClick={toggleThemeMode} icon={isDark ? '☀️' : '🌙'} block>
                     切换至{isDark ? '浅色' : '深色'}主题
                 </Button>
-                <Tag color="purple">使用Context API</Tag>
+                <Tag color="purple">使用Zustand</Tag>
             </Space>
         </Card>
     );
 };
 
-// ====================== 跨组件通信：Context子组件2 ======================
+// ====================== 跨组件通信：Zustand子组件2 ======================
 const ContextChildComponent2 = () => {
-    const { theme, isDark } = useTheme();
+    const { themeMode } = useAppStore();
+    const isDark = themeMode === 'dark';
+    const theme = themeMode;
 
     return (
-        <Card size="small" title="Context子组件2">
+        <Card size="small" title="Zustand子组件2">
             <div
                 style={{
                     padding: 16,
                     borderRadius: 8,
-                    backgroundColor: isDark ? '#f5f5f520' : '#f5f5f5',
+                    backgroundColor: isDark ? '#f5f5f520' : '#f5f520',
                     transition: 'all 0.3s ease',
                 }}
             >
                 <Paragraph>
-                    我是Context子组件2，
-                    <strong>共享</strong> 了Context子组件1切换的主题状态。
+                    我是Zustand子组件2，
+                    <strong>共享</strong> 了Zustand子组件1切换的主题状态。
                 </Paragraph>
                 <Paragraph>
                     当前主题：<Tag color={isDark ? 'blue' : 'gold'}>{theme === 'light' ? '浅色主题' : '深色主题'}</Tag>
                 </Paragraph>
-                <Paragraph>
-                    ✨ <strong>优化亮点：</strong>
-                    <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
-                        <li>使用Ant Design ConfigProvider实现全局主题</li>
-                        <li>主题切换时平滑过渡动画</li>
-                        <li>组件状态与主题联动</li>
-                        <li>性能优化：使用useMemo和useCallback</li>
-                    </ul>
-                </Paragraph>
             </div>
             <Tag color="purple" style={{ marginTop: 8 }}>
-                使用Context API
+                使用Zustand
             </Tag>
         </Card>
     );

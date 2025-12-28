@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Input, Button, Checkbox, Card, Space, Typography, Switch, Empty } from 'antd';
-import { DeleteOutlined, PlusOutlined, EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { useTheme } from '@/context/ThemeContext';
+import { DeleteOutlined, PlusOutlined, EditOutlined, CheckOutlined, CloseOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { useAppStore } from '@/store';
 import { getThemeColors } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/theme';
+import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
 
@@ -221,7 +222,8 @@ const ToDoList = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingText, setEditingText] = useState('');
 
-    const { theme, toggleTheme } = useTheme();
+    const { themeMode, toggleThemeMode } = useAppStore();
+    const navigate = useNavigate();
 
     // 分离已完成和未完成的任务（使用 useMemo 优化性能）
     const { pendingTodos, completedTodos, stats } = useMemo(() => {
@@ -240,8 +242,8 @@ const ToDoList = () => {
 
     // 主题颜色变量
     const themeColors = useMemo(() => {
-        return getThemeColors(theme);
-    }, [theme]);
+        return getThemeColors(themeMode);
+    }, [themeMode]);
 
     // 主题样式对象
     const themeStyles = useMemo(
@@ -320,91 +322,99 @@ const ToDoList = () => {
     }, []);
 
     return (
-        <Card
-            title={
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Title
-                        level={3}
-                        style={{
-                            margin: 0,
-                            color: themeStyles.text.color,
-                            fontSize: '18px',
-                        }}
-                    >
-                        待办事项列表
-                    </Title>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 14, color: themeStyles.text.color }}>{theme === 'light' ? '浅色' : '深色'}主题</span>
-                        <Switch checked={theme === 'dark'} onChange={toggleTheme} checkedChildren="🌙" unCheckedChildren="☀️" />
-                    </div>
-                </div>
-            }
-            style={themeStyles.card}
-            styles={{
-                body: {
-                    backgroundColor: themeColors.background,
-                    padding: '20px',
-                    width: 600,
-                },
-            }}
-        >
-            {/* 添加任务区域 */}
-            <Space.Compact
-                style={{
-                    width: '100%',
-                    marginBottom: 24,
-                    display: 'flex',
-                }}
-            >
-                <Input placeholder="添加待办事项..." value={inputValue} onChange={e => setInputValue(e.target.value)} onPressEnter={addTodo} style={themeStyles.input} allowClear />
-                <Button type="primary" icon={<PlusOutlined />} onClick={addTodo} size="large" style={{ minWidth: 80 }}>
-                    添加
+        <>
+            {/* 返回首页按钮 */}
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <Button onClick={() => navigate('/')} type="primary" size="large" icon={<ArrowRightOutlined />}>
+                    返回首页
                 </Button>
-            </Space.Compact>
-
-            {/* 任务列表区域 */}
-            <TaskList
-                tasks={pendingTodos}
-                title="未完成任务"
-                themeColors={themeColors}
-                onToggle={toggleTodo}
-                onEdit={editTodo}
-                onSave={saveTodo}
-                onCancel={cancelEdit}
-                onDelete={deleteTodo}
-                editingId={editingId}
-                editingText={editingText}
-            />
-
-            <TaskList
-                tasks={completedTodos}
-                title="已完成任务"
-                themeColors={themeColors}
-                onToggle={toggleTodo}
-                onEdit={editTodo}
-                onSave={saveTodo}
-                onCancel={cancelEdit}
-                onDelete={deleteTodo}
-                editingId={editingId}
-                editingText={editingText}
-            />
-
-            {/* 统计信息 */}
-            <div
-                style={{
-                    marginTop: 16,
-                    textAlign: 'center',
-                    padding: '12px',
-                    backgroundColor: themeColors.statsBg,
-                    borderRadius: 4,
-                    border: `1px solid ${themeColors.statsBorder}`,
+            </div>
+            <Card
+                title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Title
+                            level={3}
+                            style={{
+                                margin: 0,
+                                color: themeStyles.text.color,
+                                fontSize: '18px',
+                            }}
+                        >
+                            待办事项列表
+                        </Title>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 14, color: themeStyles.text.color }}>{themeMode === 'light' ? '浅色' : '深色'}主题</span>
+                            <Switch checked={themeMode === 'dark'} onChange={toggleThemeMode} checkedChildren="🌙" unCheckedChildren="☀️" />
+                        </div>
+                    </div>
+                }
+                style={themeStyles.card}
+                styles={{
+                    body: {
+                        backgroundColor: themeColors.background,
+                        padding: '20px',
+                        width: 600,
+                    },
                 }}
             >
-                <span style={themeStyles.stats}>
-                    总计: {stats.total} | 已完成: {stats.completed} | 未完成: {stats.pending}
-                </span>
-            </div>
-        </Card>
+                {/* 添加任务区域 */}
+                <Space.Compact
+                    style={{
+                        width: '100%',
+                        marginBottom: 24,
+                        display: 'flex',
+                    }}
+                >
+                    <Input placeholder="添加待办事项..." value={inputValue} onChange={e => setInputValue(e.target.value)} onPressEnter={addTodo} style={themeStyles.input} allowClear />
+                    <Button type="primary" icon={<PlusOutlined />} onClick={addTodo} size="large" style={{ minWidth: 80 }}>
+                        添加
+                    </Button>
+                </Space.Compact>
+
+                {/* 任务列表区域 */}
+                <TaskList
+                    tasks={pendingTodos}
+                    title="未完成任务"
+                    themeColors={themeColors}
+                    onToggle={toggleTodo}
+                    onEdit={editTodo}
+                    onSave={saveTodo}
+                    onCancel={cancelEdit}
+                    onDelete={deleteTodo}
+                    editingId={editingId}
+                    editingText={editingText}
+                />
+
+                <TaskList
+                    tasks={completedTodos}
+                    title="已完成任务"
+                    themeColors={themeColors}
+                    onToggle={toggleTodo}
+                    onEdit={editTodo}
+                    onSave={saveTodo}
+                    onCancel={cancelEdit}
+                    onDelete={deleteTodo}
+                    editingId={editingId}
+                    editingText={editingText}
+                />
+
+                {/* 统计信息 */}
+                <div
+                    style={{
+                        marginTop: 16,
+                        textAlign: 'center',
+                        padding: '12px',
+                        backgroundColor: themeColors.statsBg,
+                        borderRadius: 4,
+                        border: `1px solid ${themeColors.statsBorder}`,
+                    }}
+                >
+                    <span style={themeStyles.stats}>
+                        总计: {stats.total} | 已完成: {stats.completed} | 未完成: {stats.pending}
+                    </span>
+                </div>
+            </Card>
+        </>
     );
 };
 
