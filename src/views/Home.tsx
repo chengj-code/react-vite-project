@@ -1,7 +1,7 @@
 import { Card, Button, Typography, Row, Col, Avatar, Space } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { CheckSquareOutlined, AppstoreOutlined, CodeOutlined, ArrowRightOutlined, LogoutOutlined, LoginOutlined } from '@ant-design/icons';
+import { CheckSquareOutlined, AppstoreOutlined, CodeOutlined, ArrowRightOutlined, LogoutOutlined, LoginOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useAppStore } from '@/store';
 
 const { Title, Paragraph } = Typography;
@@ -70,20 +70,20 @@ const apps = [
         to: '/reducer',
         buttonText: '进入应用',
     },
-    // {
-    //     title: 'React Router 演示',
-    //     description: '演示React Router v6的核心功能，包括路由配置、嵌套路由、动态路由参数等。',
-    //     icon: <CodeOutlined />,
-    //     iconBgColor: '#722ed1',
-    //     to: '/router-demo',
-    //     buttonText: '进入演示',
-    // },
     {
         title: 'Zustand 状态管理演示',
         description: '演示Zustand状态管理库的基本用法，包括状态定义、状态更新和状态订阅。',
         icon: <CodeOutlined />,
         iconBgColor: '#722ed1',
         to: '/zustand',
+        buttonText: '进入演示',
+    },
+    {
+        title: '购物车功能演示',
+        description: '演示完整的购物车功能，包括商品添加、数量修改、移除商品、总价计算和本地存储。',
+        icon: <ShoppingCartOutlined />,
+        iconBgColor: '#ff4d4f',
+        to: '/cart',
         buttonText: '进入演示',
     },
 ];

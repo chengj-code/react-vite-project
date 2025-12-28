@@ -6,6 +6,7 @@ import ToDoList from '@/views/ToDoList';
 import ReducerContent from '@/views/ReduerContent';
 import ZustandDemo from '@/views/ZustandDemo';
 import Login from '@/views/Login';
+import CartDemo from '@/views/CartDemo';
 
 // 全局路由配置
 const AppRoutes = () => {
@@ -16,6 +17,7 @@ const AppRoutes = () => {
             <Route path="/todo" element={<ToDoList />} />
             <Route path="/reducer" element={<ReducerContent />} />
             <Route path="/zustand" element={<ZustandDemo />} />
+            <Route path="/cart" element={<CartDemo />} />
             <Route path="*" element={<Home />} />
         </Routes>
     );
