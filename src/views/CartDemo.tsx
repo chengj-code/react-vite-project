@@ -122,16 +122,7 @@ const CartDemo = () => {
         clearCart();
         message.success('购物车已清空');
     };
-    const [messageApi] = message.useMessage();
 
-    const confirm: PopconfirmProps['onConfirm'] = () => {
-        handleClearCart();
-        messageApi.success('Click on Yes');
-    };
-
-    const cancel: PopconfirmProps['onCancel'] = () => {
-        messageApi.error('Click on No');
-    };
     return (
         <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
             {/* 返回首页按钮 */}
@@ -293,7 +284,7 @@ const CartDemo = () => {
                                     >
                                         去结算
                                     </Button>
-                                    <Popconfirm title="提示" description="您确定要清空购物车?" onConfirm={confirm} onCancel={cancel} okText="确定" cancelText="取消">
+                                    <Popconfirm title="提示" description="您确定要清空购物车?" onConfirm={handleClearCart} okText="确定" cancelText="取消">
                                         <Button type="default" size="large" block style={{ borderRadius: 6, height: 48 }}>
                                             清空购物车
                                         </Button>
