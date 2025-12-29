@@ -4,7 +4,7 @@ import { DeleteOutlined, PlusOutlined, EditOutlined, CheckOutlined, CloseOutline
 import { useAppStore } from '@/store';
 import { getThemeColors } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/theme';
-import { useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchTodos, addTodo, updateTodo, deleteTodo, toggleTodo as toggleTodoApi } from '@/api/todoApi';
 import type { TodoItem, TodosResponse } from '@/api/todoApi';
@@ -469,6 +469,7 @@ const ToDoList = () => {
                             待办事项列表
                         </Title>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <button onClick={() => navigate('/todo/test')}>测试嵌套路由</button>
                             <span style={{ fontSize: 14, color: themeStyles.text.color }}>{themeMode === 'light' ? '浅色' : '深色'}主题</span>
                             <Switch checked={themeMode === 'dark'} onChange={toggleThemeMode} checkedChildren="🌙" unCheckedChildren="☀️" />
                         </div>
@@ -559,6 +560,7 @@ const ToDoList = () => {
                     </span>
                 </div>
             </Card>
+            <Outlet />
         </>
     );
 };
