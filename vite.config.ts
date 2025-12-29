@@ -35,10 +35,16 @@ export default defineConfig(({ mode }) => {
                         if (id.includes('node_modules')) {
                             if (id.includes('react') || id.includes('react-dom')) {
                                 return 'react-vendor';
+                            } else if (id.includes('antd') && id.includes('icons')) {
+                                return 'antd-icons-vendor';
                             } else if (id.includes('antd')) {
                                 return 'antd-vendor';
                             } else if (id.includes('react-router-dom')) {
                                 return 'router-vendor';
+                            } else if (id.includes('@tanstack/react-query')) {
+                                return 'react-query-vendor';
+                            } else if (id.includes('zustand')) {
+                                return 'zustand-vendor';
                             } else {
                                 return 'other-vendors';
                             }
@@ -80,7 +86,7 @@ export default defineConfig(({ mode }) => {
             // 生成构建报告
             reportCompressedSize: true,
             // 生成分析报告
-            chunkSizeWarningLimit: 500, // 500KB的chunk大小警告
+            chunkSizeWarningLimit: 1000, // 1000KB的chunk大小警告，适应React 19的核心库大小
 
             // 启用源映射，区分开发/生产环境
             sourcemap: mode === 'development',
@@ -134,6 +140,8 @@ export default defineConfig(({ mode }) => {
                 gzipSize: true,
                 brotliSize: true,
                 filename: 'bundle-analysis.html',
+                template: 'treemap', // 使用树状图模板，更直观
+                sourcemap: mode === 'development',
             }),
             // 压缩插件
             compression({

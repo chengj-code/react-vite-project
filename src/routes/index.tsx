@@ -2,13 +2,13 @@ import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
 // 懒加载页面组件
-const Home = lazy(() => import(/* webpackChunkName: "home" */ '@/views/Home'));
-const ToDoList = lazy(() => import(/* webpackChunkName: "todo" */ '@/views/ToDoList'));
-const ReducerContent = lazy(() => import(/* webpackChunkName: "reducer" */ '@/views/ReduerContent'));
-const ZustandDemo = lazy(() => import(/* webpackChunkName: "zustand" */ '@/views/ZustandDemo'));
-const Login = lazy(() => import(/* webpackChunkName: "login" */ '@/views/Login'));
-const CartDemo = lazy(() => import(/* webpackChunkName: "cart" */ '@/views/CartDemo'));
-const Test = lazy(() => import(/* webpackChunkName: "test" */ '@/views/Test'));
+const Home = lazy(() => import('@/views/Home'));
+const ToDoList = lazy(() => import('@/views/ToDoList'));
+const ReducerContent = lazy(() => import('@/views/ReduerContent'));
+const ZustandDemo = lazy(() => import('@/views/ZustandDemo'));
+const Login = lazy(() => import('@/views/Login'));
+const CartDemo = lazy(() => import('@/views/CartDemo'));
+const Test = lazy(() => import('@/views/Test'));
 
 // 加载中组件
 const LoadingSpinner = () => (
